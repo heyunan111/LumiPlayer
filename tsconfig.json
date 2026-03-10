@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["apps/renderer/src/**/*.ts", "apps/renderer/src/**/*.tsx", "apps/renderer/src/**/*.vue", "electron", "apps/electron-main/electron-env.d.ts", "apps/electron-main/main.ts", "apps/electron-main/preload.ts"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}
