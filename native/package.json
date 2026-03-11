@@ -1,0 +1,20 @@
+{
+  "name": "lumiplayer-native",
+  "version": "1.0.0",
+  "description": "Native C++ addon for LumiPlayer",
+  "main": "build/Release/addon.node",
+  "scripts": {
+    "build": "cmake-js compile",
+    "build:mingw": "cmake-js compile -G \"MinGW Makefiles\"",
+    "rebuild": "cmake-js rebuild",
+    "clean": "cmake-js clean",
+    "build:gyp": "node-gyp rebuild"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.0.0"
+  },
+  "devDependencies": {
+    "cmake-js": "^8.0.0",
+    "node-gyp": "^10.0.0"
+  }
+}

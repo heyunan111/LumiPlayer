@@ -1,12 +1,9 @@
 <template>
     <div class="Home">
-
         <div class="Player">
-
             <Player />
-            <ProgressBar />
+            <ProgressBar :percentage="30" />
             <ControlBar />
-
         </div>
         <div class="FileExplorer">
             <FileExplorer />
@@ -24,11 +21,19 @@ import ProgressBar from '../components/player/ProgressBar.vue';
 <style lang="css" scoped>
 .Home {
     display: flex;
-    justify-content: space-around;
+    width: 100%;
+    overflow: auto;
 }
 
 .Player {
+    flex: 1;
     display: flex;
     flex-direction: column;
+    overflow: auto;
+}
+
+.FileExplorer {
+    overflow: auto;
+    width: 20vh;
 }
 </style>

@@ -1,6 +1,6 @@
 <template>
-    <div>
-        <h2>player </h2>
+    <div class="Player">
+        <img src="/LumiPlayer.png" />
     </div>
 </template>
 
@@ -8,4 +8,10 @@
 
 </script>
 
-<style lang="css" scoped></style>
+<style lang="css" scoped>
+.Player {
+    display: flex;
+    justify-content: center;
+    background-color: rgb(0, 0, 0);
+}
+</style>

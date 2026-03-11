@@ -22,3 +22,21 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
   // You can expose other APTs you need here.
   // ...
 })
+
+// 暴露数据库测试 API
+contextBridge.exposeInMainWorld('testApi', {
+  createUser: (name: string, email: string, age?: number) => 
+    ipcRenderer.invoke('test:createUser', name, email, age),
+  
+  getUsers: () => 
+    ipcRenderer.invoke('test:getUsers'),
+  
+  getUserById: (id: number) => 
+    ipcRenderer.invoke('test:getUserById', id),
+  
+  updateUser: (id: number, name?: string, age?: number) => 
+    ipcRenderer.invoke('test:updateUser', id, name, age),
+  
+  deleteUser: (id: number) => 
+    ipcRenderer.invoke('test:deleteUser', id)
+})

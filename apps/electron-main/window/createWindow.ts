@@ -1,5 +1,5 @@
 
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, app } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -7,17 +7,21 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // 定义路径变量
 const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
-const APP_ROOT = path.join(__dirname, '../..')
+// 使用 app.getAppPath() 获取应用根目录
+const APP_ROOT = app.getAppPath()
 const RENDERER_DIST = path.join(APP_ROOT, 'dist-electron')
 const VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(APP_ROOT, 'public') : RENDERER_DIST
 
 let win: BrowserWindow | null
 
 export default function createWindow() {
+  const iconPath = path.join(VITE_PUBLIC, 'logo.ico')
+  
   win = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(VITE_PUBLIC, 'electron-vite.svg'),
+    icon: iconPath,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
@@ -33,7 +37,7 @@ export default function createWindow() {
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL)
     // 开发模式下打开开发者工具
-    win.webContents.openDevTools()
+    // win.webContents.openDevTools()
   } else {
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }

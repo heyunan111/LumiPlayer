@@ -2,26 +2,23 @@
 
 declare namespace NodeJS {
   interface ProcessEnv {
-    /**
-     * The built directory structure
-     *
-     * ```tree
-     * ├─┬─┬ dist
-     * │ │ └── index.html
-     * │ │
-     * │ ├─┬ dist-electron
-     * │ │ ├── main.js
-     * │ │ └── preload.js
-     * │
-     * ```
-     */
-    APP_ROOT: string
-    /** /dist/ or /public/ */
-    VITE_PUBLIC: string
+    VITE_DEV_SERVER_URL: string
   }
 }
 
-// Used in Renderer process, expose in `preload.ts`
+// 为 window 对象添加类型定义
 interface Window {
-  ipcRenderer: import('electron').IpcRenderer
+  ipcRenderer: {
+    on: (channel: string, listener: (event: any, ...args: any[]) => void) => void
+    off: (channel: string, ...args: any[]) => void
+    send: (channel: string, ...args: any[]) => void
+    invoke: (channel: string, ...args: any[]) => Promise<any>
+  }
+  testApi: {
+    createUser: (name: string, email: string, age?: number) => Promise<any>
+    getUsers: () => Promise<any[]>
+    getUserById: (id: number) => Promise<any>
+    updateUser: (id: number, name?: string, age?: number) => Promise<any>
+    deleteUser: (id: number) => Promise<void>
+  }
 }

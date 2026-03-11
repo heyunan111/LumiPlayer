@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 
 dist-electron
+.env
+
+# Prisma
+*.db
+*.db-journal
+prisma/*.db
+prisma/*.db-journal

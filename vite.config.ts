@@ -19,7 +19,15 @@ export default defineConfig({
         vite: {
           build: {
             outDir: path.resolve(__dirname, 'dist-electron'),
+            rollupOptions: {
+              external: ['@prisma/client', '.prisma/client', 'prisma']
+            }
           },
+          resolve: {
+            alias: {
+              '.prisma/client': path.resolve(__dirname, 'node_modules/.prisma/client')
+            }
+          }
         },
       },
       preload: {
