@@ -1,6 +1,3 @@
-// Native C++ API 接口
-
-// 声明 window 上的 ipcRenderer（扩展已有类型）
 declare global {
   interface Window {
     ipcRenderer: {
@@ -13,18 +10,25 @@ declare global {
 }
 
 export const nativeApi = {
-  // Hello World
-  sayHello: async (): Promise<string> => {
-    return await window.ipcRenderer.invoke("native:sayHello");
+  openFileDialog: async (): Promise<string> => {
+    return await window.ipcRenderer.invoke("native:openFileDialog");
   },
 
-  // 问候函数
-  greet: async (name: string): Promise<string> => {
-    return await window.ipcRenderer.invoke("native:greet", name);
-  },
-
-  // 加法函数
-  add: async (a: number, b: number): Promise<number> => {
-    return await window.ipcRenderer.invoke("native:add", a, b);
+  getFileSize: async (filePath: string): Promise<number> => {
+    return await window.ipcRenderer.invoke("native:getFileSize", filePath);
   },
 };
+
+// 通过 HTMLMediaElement 获取媒体时长（秒），在 renderer 进程中调用
+export function getMediaDuration(filePath: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const media = document.createElement("video");
+    media.preload = "metadata";
+    media.src = `localfile://${filePath.replace(/\\/g, "/").replace(/^([A-Za-z]):/, "$1%3A")}`;
+    media.onloadedmetadata = () => {
+      resolve(media.duration);
+      media.src = "";
+    };
+    media.onerror = () => reject(new Error("Failed to load media metadata"));
+  });
+}

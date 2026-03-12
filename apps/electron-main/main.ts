@@ -1,32 +1,15 @@
 import { app, BrowserWindow } from "electron";
 import { fileURLToPath } from "node:url";
-import createWindow from "./window/createWindow";
+import createWindow, {
+  registerLocalFileProtocol,
+  handleLocalFileProtocol,
+} from "./window/createWindow";
 import path from "node:path";
 
-// 在导入 IPC 之前设置数据库路径
-const dbPath = path.join(app.getPath("userData"), "dev.db");
-process.env.DATABASE_URL = `file:${dbPath}`;
-
-import "./ipc/testIpc";
 import { registerNativeIpc } from "./ipc/nativeIpc";
 
-// 初始化数据库
-async function initDatabase() {
-  const { getPrisma } = await import("../../packages/database/db");
-  const prisma = getPrisma();
-
-  // 创建表（如果不存在）
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE NOT NULL,
-      age INTEGER
-    )
-  `);
-
-  console.log("Database initialized");
-}
+// 必须在 app ready 之前注册
+registerLocalFileProtocol();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -71,7 +54,7 @@ app.on("activate", () => {
 });
 
 app.whenReady().then(async () => {
-  await initDatabase();
-  registerNativeIpc(); // 注册 Native IPC
+  handleLocalFileProtocol();
+  registerNativeIpc();
   createWindow();
 });
