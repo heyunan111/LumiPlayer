@@ -9,6 +9,8 @@ declare global {
   }
 }
 
+import { MediaFile } from "../store/playerStore";
+
 export const nativeApi = {
   openFileDialog: async (): Promise<string> => {
     return await window.ipcRenderer.invoke("native:openFileDialog");
@@ -17,14 +19,23 @@ export const nativeApi = {
   getFileSize: async (filePath: string): Promise<number> => {
     return await window.ipcRenderer.invoke("native:getFileSize", filePath);
   },
+
+  dbInsert: async (file: MediaFile) => {
+    return await window.ipcRenderer.invoke("native:dbInsert", file);
+  },
+  dbRemove: async (id: string) => {
+    return await window.ipcRenderer.invoke("native:dbRemove", id);
+  },
+  dbGetAll: async (): Promise<MediaFile[]> => {
+    return await window.ipcRenderer.invoke("native:dbGetAll");
+  },
 };
 
-// 通过 HTMLMediaElement 获取媒体时长（秒），在 renderer 进程中调用
 export function getMediaDuration(filePath: string): Promise<number> {
   return new Promise((resolve, reject) => {
     const media = document.createElement("video");
     media.preload = "metadata";
-    media.src = `localfile://${filePath.replace(/\\/g, "/").replace(/^([A-Za-z]):/, "$1%3A")}`;
+    media.src = `localfile://local/${encodeURIComponent(filePath)}`;
     media.onloadedmetadata = () => {
       resolve(media.duration);
       media.src = "";

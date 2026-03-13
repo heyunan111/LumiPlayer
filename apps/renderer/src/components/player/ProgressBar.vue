@@ -1,108 +1,134 @@
 <template>
     <div class="ProgressBar">
-        <button class="nav-btn prev">
-            <span class="arrow">←</span>
+        <button class="nav-btn" @click="onPrev" title="上一首">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                <line x1="5" y1="19" x2="5" y2="5"></line>
+            </svg>
         </button>
 
-        <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: percentage + '%' }">
-            </div>
+        <Slider class="progress-slider" v-model="progress" @dragStart="onDragStart" @dragEnd="onDragEnd" />
 
-        </div>
-        <div class="progress-text-container">
-            <span class="progress-text">{{ percentage }}%</span>
-        </div>
-        <button class="nav-btn next">
-            <span class="arrow">→</span>
+        <span class="time-display">{{ formatTime(playerContextStore.currentTime) }} / {{
+            formatTime(playerContextStore.duration) }}</span>
+
+        <button class="nav-btn" @click="onNext" title="下一首">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                <line x1="19" y1="5" x2="19" y2="19"></line>
+            </svg>
         </button>
     </div>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script lang="ts" setup>
+import { ref, watch } from 'vue'
+import Slider from './Slider.vue'
+import { PlayerContextStore, FileExplorerStore } from '../../store/playerStore'
 
-const props = defineProps({
-    // 当前进度 (0-100)
-    percentage: {
-        type: Number,
-        default: 0,
-        validator: (value) => value >= 0 && value <= 100
-    },
+const playerContextStore = PlayerContextStore()
+const fileExplorerStore = FileExplorerStore()
 
+const progress = ref(0)
+let isSeeking = false
+
+watch(progress, (val) => {
+    if (isSeeking) playerContextStore.setProgress(val)
 })
 
-const barStyle = computed(() => ({
-    width: props.percentage + '%',
-    backgroundColor: props.color,
-    height: '100%',
-    borderRadius: 'inherit',
-    transition: props.animated ? 'width 0.3s ease' : 'none',
-    position: 'relative'
-}))
+watch(() => playerContextStore.progress, (val) => {
+    if (!isSeeking) progress.value = val
+})
+
+function onDragStart() { isSeeking = true }
+function onDragEnd(val: number) {
+    playerContextStore.setProgress(val)
+    isSeeking = false
+}
+
+watch(() => fileExplorerStore.selectedFileId, (id) => {
+    if (!id) return
+    progress.value = 0
+    const file = fileExplorerStore.getFile(id)
+    if (file) {
+        playerContextStore.setType(file.type)
+        playerContextStore.setProgress(0)
+        playerContextStore.setCurrentTime(0)
+        if (file.duration) playerContextStore.setDuration(file.duration)
+        playerContextStore.setIsPause(true)
+    }
+})
+
+function onPrev() {
+    const files = fileExplorerStore.files
+    const idx = files.findIndex(f => f.id === fileExplorerStore.selectedFileId)
+    if (idx > 0) fileExplorerStore.selectFile(files[idx - 1].id)
+}
+
+function onNext() {
+    const files = fileExplorerStore.files
+    const idx = files.findIndex(f => f.id === fileExplorerStore.selectedFileId)
+    if (idx < files.length - 1) fileExplorerStore.selectFile(files[idx + 1].id)
+}
+
+function formatTime(seconds: number): string {
+    if (!seconds || isNaN(seconds)) return '0:00'
+    const m = Math.floor(seconds / 60)
+    const s = Math.floor(seconds % 60)
+    return `${m}:${s.toString().padStart(2, '0')}`
+}
 </script>
 
 <style scoped>
 .ProgressBar {
-    background-color: rgb(31, 31, 31);
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 10px;
-    padding: 10px;
+    gap: 12px;
+    padding: 0 16px;
+    height: 44px;
+    background: rgba(14, 14, 14, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .nav-btn {
     background: transparent;
     border: none;
-    color: white;
-    font-size: 24px;
+    color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 6px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: opacity 0.2s;
+    transition: color 0.2s ease, background 0.2s ease;
+    flex-shrink: 0;
 }
 
 .nav-btn:hover {
-    opacity: 0.8;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .nav-btn:active {
-    opacity: 0.6;
+    background: rgba(255, 255, 255, 0.14);
 }
 
-.progress-bar {
-    background-color: rgb(78,
-            78,
-            78);
-    border-radius: 100px;
-    overflow: hidden;
-    height: 5px;
-    position: relative;
+.progress-slider {
     flex: 1;
-    min-width: 100px;
+    min-width: 60px;
 }
 
-.progress-fill {
-    background-color: rgb(44, 44, 226);
-    height: 100%;
-    border-radius: 100px;
-    transition: width 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-}
-
-.progress-text-container {
-    min-width: 40px;
-    display: flex;
-    justify-content: center;
-}
-
-.progress-text {
-    color: white;
-    font-size: 12px;
-    text-shadow: 0 0 2px rgba(0, 0, 0, 0.5);
+.time-display {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: #888;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
 }
 </style>

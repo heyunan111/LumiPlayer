@@ -1,4 +1,5 @@
 import { defineStore } from "pinia";
+import { nativeApi } from "../api/native";
 
 export type FileType = "video" | "audio";
 
@@ -7,9 +8,9 @@ export interface MediaFile {
   type: FileType;
   path: string;
   name: string;
-  size: number; // 文件大小（字节）
-  duration?: number; // 时长（秒）
-  addedAt: number; // 添加时间戳
+  size: number;
+  duration?: number;
+  addedAt: number;
 }
 
 export const FileExplorerStore = defineStore("FileExplorer", {
@@ -20,45 +21,34 @@ export const FileExplorerStore = defineStore("FileExplorer", {
   }),
 
   getters: {
-    // 获取所有视频文件
-    videoFiles: (state) => state.files.filter((f) => f.type === "video"),
-
-    // 获取所有音频文件
-    audioFiles: (state) => state.files.filter((f) => f.type === "audio"),
-
-    // 获取文件总数
-    totalFiles: (state) => state.files.length,
-
-    // 获取总大小（字节）
-    totalSize: (state) => state.files.reduce((sum, f) => sum + f.size, 0),
-
-    // 获取选中的文件
     selectedFile: (state) =>
       state.files.find((f) => f.id === state.selectedFileId) || null,
+    getFile: (state) => (id: string) => {
+      return state.files.find((f) => f.id === id) || null;
+    },
   },
 
   actions: {
-    // 添加文件
-    addFile(file: Omit<MediaFile, "id" | "addedAt">) {
+    async init() {
+      this.files = await nativeApi.dbGetAll();
+    },
+
+    async addFile(file: Omit<MediaFile, "id" | "addedAt">) {
       const newFile: MediaFile = {
         ...file,
         id: `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         addedAt: Date.now(),
       };
       this.files.push(newFile);
+      await nativeApi.dbInsert(newFile);
       return newFile;
     },
 
-    // 批量添加文件
-    addFiles(files: Omit<MediaFile, "id" | "addedAt">[]) {
-      return files.map((file) => this.addFile(file));
-    },
-
-    // 删除文件
-    removeFile(fileId: string) {
+    async removeFile(fileId: string) {
       const index = this.files.findIndex((f) => f.id === fileId);
       if (index !== -1) {
         this.files.splice(index, 1);
+        await nativeApi.dbRemove(fileId);
         if (this.selectedFileId === fileId) {
           this.selectedFileId = null;
         }
@@ -68,37 +58,78 @@ export const FileExplorerStore = defineStore("FileExplorer", {
       }
     },
 
-    // 清空所有文件
-    clearFiles() {
+    async clearFiles() {
+      await Promise.all(this.files.map((f) => nativeApi.dbRemove(f.id)));
       this.files = [];
       this.currentFile = null;
       this.selectedFileId = null;
     },
 
-    // 选择文件
     selectFile(fileId: string) {
       this.selectedFileId = fileId;
     },
 
-    // 设置当前播放文件
     setCurrentFile(fileId: string) {
       const file = this.files.find((f) => f.id === fileId);
       if (file) {
         this.currentFile = file;
       }
     },
+  },
+});
 
-    // 更新文件信息
-    updateFile(fileId: string, updates: Partial<Omit<MediaFile, "id">>) {
-      const file = this.files.find((f) => f.id === fileId);
-      if (file) {
-        Object.assign(file, updates);
+export interface PlayerContext {
+  type: FileType;
+  progress: number;
+  currentTime: number;
+  duration: number;
+  isPause: boolean;
+  volume: number;
+}
+
+export const PlayerContextStore = defineStore("PlayerContext", {
+  state: () => ({
+    playerContext: {
+      type: "audio" as FileType,
+      progress: 0,
+      currentTime: 0,
+      duration: 0,
+      isPause: true,
+      volume: 0.3,
+    } as PlayerContext,
+  }),
+
+  getters: {
+    type: (state) => state.playerContext.type,
+    progress: (state) => state.playerContext.progress,
+    currentTime: (state) => state.playerContext.currentTime,
+    duration: (state) => state.playerContext.duration,
+    isPause: (state) => state.playerContext.isPause,
+    volume: (state) => state.playerContext.volume,
+  },
+
+  actions: {
+    setType(type: FileType) {
+      this.playerContext.type = type;
+    },
+    setProgress(progress: number) {
+      this.playerContext.progress = Math.min(100, Math.max(0, progress));
+    },
+    setCurrentTime(currentTime: number) {
+      this.playerContext.currentTime = currentTime;
+      if (this.playerContext.duration > 0) {
+        this.playerContext.progress =
+          (currentTime / this.playerContext.duration) * 100;
       }
     },
-
-    // 根据路径查找文件
-    findByPath(path: string) {
-      return this.files.find((f) => f.path === path);
+    setDuration(duration: number) {
+      this.playerContext.duration = duration;
+    },
+    setIsPause(isPause: boolean) {
+      this.playerContext.isPause = isPause;
+    },
+    setVolume(volume: number) {
+      this.playerContext.volume = volume;
     },
   },
 });

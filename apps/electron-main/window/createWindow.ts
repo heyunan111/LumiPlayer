@@ -1,13 +1,11 @@
-import { BrowserWindow, app, protocol, net } from "electron";
+import { BrowserWindow, app, protocol } from "electron";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { createReadStream, statSync } from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// 定义路径变量
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-// 使用 app.getAppPath() 获取应用根目录
 const APP_ROOT = app.getAppPath();
 const RENDERER_DIST = path.join(APP_ROOT, "dist-electron");
 const VITE_PUBLIC = VITE_DEV_SERVER_URL
@@ -38,14 +36,47 @@ const MIME: Record<string, string> = {
 
 export function handleLocalFileProtocol() {
   protocol.handle("localfile", (request) => {
-    const raw = decodeURIComponent(request.url.slice("localfile://".length));
-    console.log("[localfile] url:", request.url, "raw:", raw);
-    const filePath = raw.replace(/\//g, "\\");
-    console.log("[localfile] filePath:", filePath);
+    const url = new URL(request.url);
+    const filePath = decodeURIComponent(url.pathname.slice(1));
     try {
       const stat = statSync(filePath);
       const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
       const mime = MIME[ext] ?? "application/octet-stream";
+      const totalSize = stat.size;
+
+      const rangeHeader = request.headers.get("range");
+      if (rangeHeader) {
+        const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+        if (match) {
+          const start = parseInt(match[1], 10);
+          const end = match[2] ? parseInt(match[2], 10) : totalSize - 1;
+          const chunkSize = end - start + 1;
+          const stream = createReadStream(filePath, { start, end });
+          const nodeStream = stream as any;
+          const webStream = new ReadableStream({
+            start(controller) {
+              nodeStream.on("data", (chunk: Buffer) =>
+                controller.enqueue(chunk),
+              );
+              nodeStream.on("end", () => controller.close());
+              nodeStream.on("error", (err: Error) => controller.error(err));
+            },
+            cancel() {
+              nodeStream.destroy();
+            },
+          });
+          return new Response(webStream, {
+            status: 206,
+            headers: {
+              "Content-Type": mime,
+              "Content-Range": `bytes ${start}-${end}/${totalSize}`,
+              "Content-Length": chunkSize.toString(),
+              "Accept-Ranges": "bytes",
+            },
+          });
+        }
+      }
+
       const stream = createReadStream(filePath);
       const nodeStream = stream as any;
       const webStream = new ReadableStream({
@@ -62,7 +93,7 @@ export function handleLocalFileProtocol() {
         status: 200,
         headers: {
           "Content-Type": mime,
-          "Content-Length": stat.size.toString(),
+          "Content-Length": totalSize.toString(),
           "Accept-Ranges": "bytes",
         },
       });
@@ -88,15 +119,13 @@ export default function createWindow() {
     },
   });
 
-  // Test active push message to Renderer-process.
   win.webContents.on("did-finish-load", () => {
     win?.webContents.send("main-process-message", new Date().toLocaleString());
   });
 
   if (VITE_DEV_SERVER_URL) {
     win.loadURL(VITE_DEV_SERVER_URL);
-    // 开发模式下打开开发者工具
-    win.webContents.openDevTools()
+    win.webContents.openDevTools();
   } else {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
